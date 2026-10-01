@@ -16,7 +16,6 @@ import { reducedMotion } from '../../../core/env'
 import { pointer, updatePointer } from '../../../core/pointer'
 import { useRuntime } from '../../../core/runtime'
 import { scroll, updateScroll } from '../../../core/scroll'
-import { updateAnchors } from '../../../engine/anchors'
 import { num, path } from '../../../engine/tracks'
 import { CAMERA, PALETTE, QUALITY, STATIONS } from '../config'
 import { AICore } from './AICore'
@@ -89,7 +88,7 @@ function Director() {
     const r = vPos.length()
     vPos.y += par.current.pitch * r * 0.5
     vPos.setLength(r).add(vTgt)
-    vPos.y += Math.sin(state.clock.elapsedTime * 0.35) * 0.04 * k
+    vPos.y += Math.sin(state.clock.elapsedTime * 0.35) * 0.02 * k
     // modo explorar: mistura suave da câmera do tour com a câmera que segue o BIT
     const P = par.current
     P.explore = MathUtils.damp(P.explore, nav.mode === 'explore' ? 1 : 0, 2.6, dt)
@@ -101,6 +100,7 @@ function Director() {
     }
     camera.position.copy(vPos)
     camera.lookAt(vTgt)
+    camera.updateMatrixWorld() // o raio do ponteiro (abaixo) usa a câmera deste quadro
     const fov = num(CAMERA.fov, p) + (aspect < 1 ? 6 : 0)
     if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix() }
     focus.distance = camera.position.distanceTo(vTgt)
@@ -108,7 +108,6 @@ function Director() {
     ndc.set(pointer.sx, pointer.sy)
     ray.setFromCamera(ndc, camera)
     if (ray.ray.intersectPlane(floor, hit)) U.uPointer.value.copy(hit)
-    updateAnchors(camera, size.width, size.height)
   })
   return null
 }

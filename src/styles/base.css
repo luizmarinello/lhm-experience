@@ -1,7 +1,7 @@
 /* Reset e fundamentos. Cores e tipografia de cada experiência ficam no CSS dela. */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scrollbar-gutter: stable; }
 body {
   min-height: 100svh;
   background: #050506;
@@ -17,7 +17,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 /* Lenis */
 html.lenis, html.lenis body { height: auto; }
-.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: hidden; } /* hidden (não clip): mantém a reserva da barra */
 .lenis [data-lenis-prevent] { overscroll-behavior: contain; }
 
 .sr-only {

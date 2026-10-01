@@ -40,12 +40,13 @@ export function Chrome({ brand, scenes, hintUntil = 5 }: Props) {
       let i = 0
       while (i < scenes.length - 1 && p >= scenes[i + 1].from) i++
       if (i !== current) {
+        const first = current < 0
         current = i
         setScene(i)
+        if (!first) audio.scene(i) // não toca no primeiro quadro (ainda carregando)
       }
       el.style.setProperty('--p', (p / 100).toFixed(4))
       el.style.setProperty('--hint', String(Math.max(0, 1 - p / hintUntil)))
-      el.style.setProperty('--vel', Math.min(1, Math.abs(scroll.velocity) * 4).toFixed(3))
       audio.setIntensity(Math.abs(scroll.velocity) * 3)
     }
     gsap.ticker.add(tick)

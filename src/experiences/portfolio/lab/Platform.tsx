@@ -39,7 +39,8 @@ export function Platform() {
           float r = length(vP.xz);
           float top = step(-0.001, vP.y);
           // incrustações finas em anéis (piso de laboratório), bem sutis
-          float ring = smoothstep(0.488, 0.498, abs(fract(r / 0.9) - 0.5)) * top * step(r, ${(PLATFORM_R - 0.3).toFixed(2)});
+          float rx = r / 0.9;
+          float ring = (1.0 - smoothstep(0.002, 0.012, abs(fract(rx + 0.5) - 0.5))) * (1.0 - smoothstep(0.005, 0.015, fwidth(rx))) * top * step(r, ${(PLATFORM_R - 0.3).toFixed(2)});
           diffuseColor.rgb *= 1.0 - ring * 0.07;
           // saia inferior mais escura e quente
           float under = 1.0 - smoothstep(-0.5, -0.3, vP.y);

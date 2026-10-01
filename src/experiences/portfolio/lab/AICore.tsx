@@ -104,6 +104,7 @@ export function AICore({ m, position, detail }: { m: Materials; position: [numbe
   }, [parts])
 
   const boost = useRef(0)
+  const spin = useRef(0)
   useFrame((_, dt) => {
     const t = U.uTime.value
     const b = blob.current
@@ -114,6 +115,7 @@ export function AICore({ m, position, detail }: { m: Materials; position: [numbe
     const want = Math.max(sceneW('system') * 0.45, c === 'AI' ? cap.weight : 0, c === 'FULL STACK' ? 0.4 * cap.weight : 0)
     boost.current += (want - boost.current) * (1 - Math.exp(-3 * dt))
     const k = boost.current
+    spin.current += dt * (0.35 + k * 1.2)
     b.scale.setScalar(1 + 0.2 * k)
     parts.mat.emissiveIntensity = 0.06 + 0.35 * k
     b.position.y = 1.32 + Math.sin(t * 0.9) * 0.05
@@ -123,7 +125,7 @@ export function AICore({ m, position, detail }: { m: Materials; position: [numbe
     parts.tmp.applyAxisAngle(Y, -b.rotation.y)
     parts.aim.value.lerp(parts.tmp, 1 - Math.exp(-3 * dt)).normalize()
     parts.aimAmt.value += ((U.uPointerNdc.value.z > 0 ? 0.16 : 0.05) + k * 0.12 - parts.aimAmt.value) * (1 - Math.exp(-2 * dt))
-    g.children[0].rotation.set(1.2 + Math.sin(t * 0.3) * 0.1, t * (0.35 + k * 1.2), 0)
+    g.children[0].rotation.set(1.2 + Math.sin(t * 0.3) * 0.1, spin.current, 0)
     g.children[1].rotation.set(1.9, -t * 0.22, 0.4)
     for (let i = 0; i < 9; i++) {
       const a = t * (0.4 + i * 0.05) + i * 0.7

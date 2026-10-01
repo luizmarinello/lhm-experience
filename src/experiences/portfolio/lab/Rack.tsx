@@ -124,7 +124,8 @@ export function Rack({ m, position, rotation = 0, cableTo }: { m: Materials; pos
     const faceMat = patch(new MeshPhysicalMaterial({ color: new Color('#3b3742'), roughness: 0.4, metalness: 0.6 }), {
       vertexHead: 'varying vec2 vUvF;', vertexBody: 'vUvF = uv;',
       fragmentHead: 'varying vec2 vUvF;',
-      fragmentColor: 'float gx = step(0.55, fract(vUvF.x * 64.0)) * step(0.28, vUvF.y) * step(vUvF.y, 0.72) * step(0.3, vUvF.x); diffuseColor.rgb *= 1.0 - 0.55 * gx;',
+      // fendas filtradas pela derivada: de perto, nítidas; de longe, viram o cinza médio (sem moiré)
+      fragmentColor: 'float f = vUvF.x * 64.0; float w = max(fwidth(f), 1e-4); float gx = 1.0 - smoothstep(0.225 - 0.5 * w, 0.225 + 0.5 * w, abs(fract(f - 0.275) - 0.5)); gx = mix(gx, 0.45, smoothstep(0.3, 0.7, w)); gx *= step(0.28, vUvF.y) * step(vUvF.y, 0.72) * step(0.3, vUvF.x); diffuseColor.rgb *= 1.0 - 0.55 * gx;',
     }, 'rack-face')
 
     // LEDs: piscam por instância no shader (processos rodando), sem CPU.
@@ -136,7 +137,7 @@ export function Rack({ m, position, rotation = 0, cableTo }: { m: Materials; pos
       vertexHead: 'varying float vLed;',
       vertexBody: '#ifdef USE_INSTANCING\n vLed = float(gl_InstanceID);\n#endif',
       fragmentHead: 'uniform float uLedT; uniform float uLedGain; varying float vLed; float hl(float x){ return fract(sin(x * 91.7) * 43758.5); }',
-      fragmentColor: 'float h = hl(vLed); float on = step(0.45, fract(h * 17.0 + uLedT * (0.6 + h * 3.0))); diffuseColor.rgb *= mix(0.12, 1.0, on) * uLedGain;',
+      fragmentColor: 'float h = hl(floor(vLed + 0.5)); float on = step(0.45, fract(h * 17.0 + uLedT * (0.6 + h * 3.0))); diffuseColor.rgb *= mix(0.12, 1.0, on) * uLedGain;',
     }, 'rack-led')
     const leds = new InstancedMesh(new BoxGeometry(0.018, 0.012, 0.006), ledMat, BLADES * LEDS)
     leds.frustumCulled = false // as LEDs das camadas saem do gabinete

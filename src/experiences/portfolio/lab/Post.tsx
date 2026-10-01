@@ -7,6 +7,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { updateAnchors } from '../../../engine/anchors'
 import type { Quality } from '../config'
 
 // Pós-processamento (o "acabamento de câmera"): MSAA no alvo de render,
@@ -22,7 +23,7 @@ export function Post({ q }: { q: Quality }) {
   const dpr = useThree((s) => s.viewport.dpr)
 
   const fx = useMemo(() => {
-    const rt = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: q.ao ? 0 : 4 })
+    const rt = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 }) // o GTAO tem G-buffer próprio: MSAA aqui não o afeta
     const composer = new EffectComposer(gl, rt)
     composer.addPass(new RenderPass(scene, camera))
     let gtao: GTAOPass | null = null
@@ -62,6 +63,10 @@ export function Post({ q }: { q: Quality }) {
 
   // prioridade 1: assume o render (o R3F deixa de desenhar sozinho)
   useFrame((_, dt) => {
+    // rótulos DOM projetados depois de todos os useFrame (cubos, lâminas e câmera
+    // já no lugar); o lookAt só grava o quaternion, então atualiza as matrizes antes
+    camera.updateMatrixWorld()
+    updateAnchors(camera, size.width, size.height)
     if (fx.bokeh) {
       const u = (fx.bokeh.uniforms as Record<string, { value: number }>)
       u.focus.value = focus.distance

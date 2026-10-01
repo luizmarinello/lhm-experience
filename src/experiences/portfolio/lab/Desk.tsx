@@ -8,8 +8,6 @@ import {
   Color,
   CylinderGeometry,
   InstancedMesh,
-  LinearFilter,
-  LinearMipmapLinearFilter,
   LatheGeometry,
   MeshPhysicalMaterial,
   Object3D,
@@ -105,12 +103,10 @@ export class Screen {
     const blink = live ? Math.floor(t * 2) % 2 : 0
     const tick = layout === 'ui' ? Math.floor(t * 8) : 0
     const key = layout + '|' + typed + '|' + blink + '|' + tick
-    if (key === this.key || t - this.last < 0.05) return
+    if (key === this.key || t - this.last < 0.08) return
     this.key = key
     this.last = t
     this.draw(layout, typed, t, blink === 0)
-    this.texture.generateMipmaps = !live
-    this.texture.minFilter = live ? LinearFilter : LinearMipmapLinearFilter
     this.texture.needsUpdate = true
   }
 

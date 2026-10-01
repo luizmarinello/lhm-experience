@@ -2,7 +2,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
 import { MathUtils } from 'three'
-import { invalidate } from './loop'
+import { invalidate, rafMs } from './loop'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -21,7 +21,7 @@ export function startScroll(story: HTMLElement): () => void {
   // Lenis respeita prefers-reduced-motion por padrão (lerp vira 1).
   const lenis = new Lenis({ autoRaf: false, lerp: 0.075, wheelMultiplier: 0.75 })
   lenis.on('scroll', ScrollTrigger.update)
-  const raf = (t: number) => lenis.raf(t * 1000)
+  const raf = (_t: number, _d: number, _f: number, v?: unknown) => lenis.raf(rafMs(v)) // mesmo relógio do render
   gsap.ticker.add(raf, false, true) // prioridade: scroll atualizado antes do render
   gsap.ticker.lagSmoothing(0)
 
@@ -55,6 +55,9 @@ export function updateScroll(dt: number, lambda: number) {
 
 export function scrollToProgress(p: number) {
   const max = document.documentElement.scrollHeight - innerHeight
-  if (scroll.lenis) scroll.lenis.scrollTo(p * max, { duration: 2.2 })
+  if (scroll.lenis) {
+    if (scroll.lenis.isStopped) scroll.lenis.start() // saindo do explore (página travada)
+    scroll.lenis.scrollTo(p * max, { duration: 2.2 })
+  }
   else scrollTo({ top: p * max, behavior: 'smooth' })
 }

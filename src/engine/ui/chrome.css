@@ -20,8 +20,7 @@
   display: flex;
   gap: 0.9em;
   align-items: center;
-  /* velocidade do scroll aproxima levemente os cantos do centro */
-  --pad: calc(clamp(16px, 2.6vw, 36px) + var(--vel, 0) * 6px);
+  --pad: clamp(16px, 2.6vw, 36px);
 }
 .chrome__tl { top: var(--pad); left: var(--pad); gap: 0.6em; }
 .chrome__tr { top: var(--pad); right: var(--pad); flex-direction: column; align-items: flex-end; gap: 14px; }
