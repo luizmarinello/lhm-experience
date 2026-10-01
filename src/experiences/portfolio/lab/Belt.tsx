@@ -27,6 +27,7 @@ import { scrollToProgress } from '../../../core/scroll'
 import { cursor } from '../../../engine/ui/Cursor'
 import { hud } from '../../../engine/ui/Hud'
 import { CAPABILITIES, PALETTE, SCENES, STATIONS } from '../config'
+import { audio } from '../../../core/audio'
 import { patch, U, type Materials } from './shared'
 import { cap, nav, sceneT, story } from './story'
 
@@ -292,6 +293,7 @@ export function Belt({ m }: { m: Materials }) {
 
     if (cap.active !== last.current) {
       last.current = cap.active
+      if (cap.active >= 0 && nav.mode === 'tour') audio.step(cap.active) // sobe a escala a cada capacidade
       drawScreen(parts.screen.c, cap.active)
       parts.screen.tex.needsUpdate = true
     }

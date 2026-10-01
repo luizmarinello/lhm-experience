@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { audio } from '../../../core/audio'
 import { scroll } from '../../../core/scroll'
 import { belladesk } from '../data/belladesk'
 import { projectUI } from '../lab/projectUI'
@@ -40,8 +41,8 @@ export function ProjectPanel({ open, onClose }: { open: boolean; onClose: () => 
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-      if (e.key === 'ArrowRight') setStop((s) => Math.min(belladesk.tour.length - 1, s + 1))
-      if (e.key === 'ArrowLeft') setStop((s) => Math.max(0, s - 1))
+      if (e.key === 'ArrowRight') setStop((s) => { if (s < belladesk.tour.length - 1) audio.open(); return Math.min(belladesk.tour.length - 1, s + 1) })
+      if (e.key === 'ArrowLeft') setStop((s) => { if (s > 0) audio.back(); return Math.max(0, s - 1) })
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)

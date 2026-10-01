@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { audio } from '../../core/audio'
 import { Vector3 } from 'three'
 import { useAnchor } from '../anchors'
 
@@ -34,6 +35,7 @@ export const hud = {
     const key = code + name
     if (key === current) return
     current = key
+    audio.hover()
     cancelAnimationFrame(timer)
     const [a, b, c] = el.querySelectorAll('span')
     scramble(a, code)
