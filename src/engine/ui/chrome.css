@@ -1,0 +1,126 @@
+/* Moldura e cursor. Cores/fontes vêm das variáveis da experiência:
+   --ink (texto), --dim (texto secundário), --faint (linhas), --accent, --font-mono. */
+
+.chrome {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.chrome button, .chrome a { pointer-events: auto; text-transform: inherit; letter-spacing: inherit; }
+
+.chrome__corner {
+  position: absolute;
+  display: flex;
+  gap: 0.9em;
+  align-items: center;
+  /* velocidade do scroll aproxima levemente os cantos do centro */
+  --pad: calc(clamp(16px, 2.6vw, 36px) + var(--vel, 0) * 6px);
+}
+.chrome__tl { top: var(--pad); left: var(--pad); gap: 0.6em; }
+.chrome__tr { top: var(--pad); right: var(--pad); flex-direction: column; align-items: flex-end; gap: 14px; }
+.chrome__bl { bottom: var(--pad); left: var(--pad); }
+.chrome__br { bottom: var(--pad); right: var(--pad); gap: 1.6em; }
+
+.chrome__dim, .chrome__slash { color: var(--dim); }
+.chrome__val { color: var(--dim); margin-left: 0.4em; transition: color 0.3s; }
+.chrome__br button:hover .chrome__val { color: var(--accent); }
+
+.chrome__counter { display: flex; align-items: baseline; gap: 0.2em; }
+.chrome__scene { margin-left: 1.2em; color: var(--dim); min-width: 11ch; text-align: right; }
+
+.odo { display: inline-block; height: 1.25em; overflow: hidden; line-height: 1.25em; }
+.odo__track { display: flex; flex-direction: column; transition: transform 0.7s cubic-bezier(0.7, 0, 0.2, 1); }
+
+.rail { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
+.rail__mark {
+  display: block;
+  width: 22px;
+  height: 12px;
+  position: relative;
+}
+.rail__mark::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background: var(--faint);
+  transition: background 0.4s, transform 0.4s;
+  transform-origin: left;
+}
+.rail__mark:hover::after { background: var(--ink); }
+.rail__mark.is-on::after { background: var(--accent); }
+
+.chrome__hint { opacity: calc(var(--hint, 1) * 0.55); gap: 1em; font-size: 10px; }
+.hint__line {
+  width: 24px; height: 1px;
+  background: linear-gradient(90deg, var(--ink) calc((1 - var(--hint, 1)) * 100%), var(--faint) 0);
+  animation: hint-breathe 2.8s ease-in-out infinite;
+}
+@keyframes hint-breathe { 50% { opacity: 0.35; } }
+
+.grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 1.2s steps(6) infinite;
+}
+@keyframes grain {
+  0% { transform: translate(0, 0); } 20% { transform: translate(-3%, 2%); } 40% { transform: translate(2%, -4%); }
+  60% { transform: translate(-4%, -1%); } 80% { transform: translate(3%, 3%); } 100% { transform: translate(0, 0); }
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+
+/* Cursor */
+.has-cursor, .has-cursor * { cursor: none !important; }
+.cursor {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  mix-blend-mode: difference;
+}
+.cursor i {
+  position: absolute;
+  width: 4px; height: 4px;
+  border: 0 solid #fff;
+}
+.cursor i:nth-child(1) { left: 0; top: 0; border-left-width: 1px; border-top-width: 1px; }
+.cursor i:nth-child(2) { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
+.cursor i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
+.cursor i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
+.cursor:not(.is-target) i { width: 100%; height: 100%; } /* quadrado inteiro de 8px */
+.cursor.is-target i { width: 7px; height: 7px; }
+.cursor__label {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: -2px;
+  font: 500 9px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  color: #fff;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain, .hint__line { animation: none; }
+  .odo__track { transition: none; }
+}
+@media (max-width: 640px) {
+  .chrome { font-size: 10px; }
+  .chrome__hint { display: none; }
+  .chrome__scene { display: none; }
+  .chrome__br { gap: 1em; }
+}
