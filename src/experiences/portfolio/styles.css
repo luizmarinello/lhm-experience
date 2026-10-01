@@ -73,7 +73,13 @@ body { background: #f4e2e2; }
   white-space: nowrap;
 }
 .hint p { margin: 0; }
-.hint--explore { pointer-events: none; }
+.hint--explore { display: flex; align-items: center; gap: 14px; padding: 6px 6px 6px 16px; }
+.hint__back {
+  pointer-events: auto; padding: 8px 12px; border-radius: 999px;
+  font: 500 10.5px/1 var(--font-mono); letter-spacing: 0.16em; color: #fff; background: var(--ink);
+  transition: background 0.25s;
+}
+.hint__back:hover { background: var(--accent); }
 
 .block { position: absolute; color: var(--ink); }
 .block--system { left: 0; right: 0; bottom: 15vh; display: grid; place-items: center; }

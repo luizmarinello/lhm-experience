@@ -1,5 +1,6 @@
 import gsap from 'gsap'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { audio } from '../../../core/audio'
 import { coarsePointer } from '../../../core/env'
 import { scrollToProgress } from '../../../core/scroll'
 import { window01 } from '../../../engine/tracks'
@@ -62,7 +63,7 @@ export function Overlay({ onExplore, interactive3d = true }: { onExplore: () => 
       {/* 01 — dica discreta: o mundo é pilotável */}
       {interactive3d && (
         <Range range={[0, 9]} className="hint hint--bit" label="Controls">
-          <p>{coarsePointer ? 'TAP THE FLOOR TO MOVE BIT' : 'DRIVE BIT · WASD / ARROWS OR CLICK THE FLOOR'}</p>
+          <p>{coarsePointer ? 'TAP THE FLOOR TO MOVE BIT' : 'DRIVE BIT · WASD OR CLICK THE FLOOR · DRAG TO LOOK AROUND'}</p>
         </Range>
       )}
 
@@ -99,7 +100,7 @@ export function Overlay({ onExplore, interactive3d = true }: { onExplore: () => 
         <p className="pj-kicker">{belladesk.kicker}</p>
         <p className="pj-summary">{belladesk.summary}</p>
         <p className="pj-note">{belladesk.note}</p>
-        <button className="btn" onClick={onExplore} data-cursor="EXPLORE">
+        <button className="btn" onClick={() => { audio.open(); onExplore() }} data-cursor="EXPLORE">
           EXPLORE PROJECT <span aria-hidden="true">→</span>
         </button>
       </Range>
@@ -110,16 +111,21 @@ export function Overlay({ onExplore, interactive3d = true }: { onExplore: () => 
         <ul className="ct-links">
           {CONTACT.map((c) => (
             <li key={c.id}>
-              <a href={c.href} target="_blank" rel="noreferrer" data-cursor={c.label}>{c.label} <span aria-hidden="true">↗</span></a>
+              <a href={c.href} target="_blank" rel="noreferrer" data-cursor={c.label} onPointerDown={() => audio.open()}>{c.label} <span aria-hidden="true">↗</span></a>
             </li>
           ))}
         </ul>
         <p className="ct-proof">Built entirely in code — React · three.js · GLSL. No downloaded 3D models.</p>
-        <button className="btn btn--ghost" onClick={() => scrollToProgress(at('awakening').at / 100)} data-cursor="REPLAY">↺ REPLAY</button>
+        <button className="btn btn--ghost" onClick={() => { audio.back(); scrollToProgress(at('awakening').at / 100) }} data-cursor="REPLAY">↺ REPLAY</button>
       </Range>
 
       {mode === 'explore' && (
-        <p className="hint hint--explore" role="status">EXPLORING · ESC OR SCROLL TO RETURN TO THE TOUR</p>
+        <div className="hint hint--explore" role="status">
+          <p>{coarsePointer ? 'DRAG · ORBIT   ·   TAP THE FLOOR · MOVE' : 'DRAG · ORBIT   ·   WHEEL · ZOOM   ·   Q / E · TURN   ·   C · RECENTER'}</p>
+          <button className="hint__back" onClick={() => { audio.back(); nav.mode = 'tour' }} data-cursor="TOUR">
+            {coarsePointer ? '← TOUR' : 'ESC · BACK TO TOUR'}
+          </button>
+        </div>
       )}
     </div>
   )

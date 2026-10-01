@@ -19,6 +19,7 @@ import { reducedMotion } from '../../../core/env'
 import { cursor } from '../../../engine/ui/Cursor'
 import { PALETTE } from '../config'
 import { U, type Materials } from './shared'
+import { audio } from '../../../core/audio'
 import { nav, openStation } from './story'
 
 // BIT, o robô-guia: flutua, pisca, olha para o cursor e pode ser pilotado
@@ -112,9 +113,9 @@ export function Bot({ m }: { m: Materials }) {
   })
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (!freeClick(e)) return
+    if (e.delta > 6 || !freeClick(e)) return // arrasto (orbitar a câmera) não é clique
     e.stopPropagation()
-    if (nav.near) openStation(nav.near)
+    if (nav.near) { audio.open(); openStation(nav.near) }
     else nav.mode = 'explore'
   }
 

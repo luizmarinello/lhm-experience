@@ -4,6 +4,8 @@ import { CircleGeometry, Color, MathUtils, Mesh, MeshBasicMaterial, TorusGeometr
 import { coarsePointer, reducedMotion } from '../../../core/env'
 import { invalidate } from '../../../core/loop'
 import { scroll } from '../../../core/scroll'
+import { audio } from '../../../core/audio'
+import { cursor } from '../../../engine/ui/Cursor'
 import { hud } from '../../../engine/ui/Hud'
 import { BELT_SPAN, PALETTE, PLATFORM_WALK_R, SCENES, STATIONS, type SceneId, type StationId } from '../config'
 import { bot, freeClick, uiBusy } from './Bot'
@@ -11,13 +13,19 @@ import { U } from './shared'
 import { nav, openStation, story } from './story'
 
 // Pilotagem do BIT. Teclado: WASD/setas relativos à câmera, Shift corre,
-// E/Enter abre a estação ao alcance, Esc volta ao tour. Clique/toque no piso:
+// F/Enter abre a estação ao alcance, Esc volta ao tour. Clique/toque no piso:
 // anda até o ponto. No tour, o BIT vai sozinho ao ponto de apresentação da
 // cena. Escreve a câmera de perseguição em nav.camPos/camTarget (o Director usa).
+// Câmera no explore: arrastar (mouse ou dedo) orbita, roda aproxima/afasta,
+// Q/E giram, C recentraliza. Enquanto explora, a página não rola (Lenis parado).
 
 const BODY = 0.3 // raio do corpo do BIT
 const WALK = 1.6, RUN = 2.6, TOUR = 1.3 // m/s
-const CAM_DIST = 3.4, CAM_H = 2.1 // atrás e acima do BIT
+const CAM_DIST = 3.4, CAM_H = 2.1 // atrás e acima do BIT (padrão)
+const PITCH0 = Math.atan2(CAM_H - 0.55, CAM_DIST) // ≈ 24° de elevação
+const DIST_MIN = 1.6, DIST_MAX = 8
+const PITCH_MIN = 0.1, PITCH_MAX = 1.25 // rad acima do horizonte
+const MANUAL_HOLD = 3 // s sem auto-seguir depois que o visitante mexe na câmera
 
 // Ponto de apresentação por cena: perto da estação da cena, fora das colisões
 // (folga ≥ 0,39 m) e dentro do enquadramento do tour; contato = centro.
@@ -44,12 +52,14 @@ const ST = (Object.keys(STATIONS) as StationId[]).map((k) => {
   }
 }
 
-const keys = { f: false, b: false, l: false, r: false, run: false }
+const keys = { f: false, b: false, l: false, r: false, run: false, turnL: false, turnR: false }
 const CODES: Record<string, keyof typeof keys> = {
   KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b',
   KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r',
   ShiftLeft: 'run', ShiftRight: 'run',
+  KeyQ: 'turnL', KeyE: 'turnR',
 }
+const MOVE_KEYS = new Set<keyof typeof keys>(['f', 'b', 'l', 'r'])
 
 const target = new Vector3()
 let hasTarget = false
@@ -58,6 +68,11 @@ const want = new Vector3() // velocidade desejada
 const fwd = new Vector3()
 const prev = new Vector3()
 let camYaw = 0
+let camPitch = PITCH0
+let camDist = CAM_DIST
+let pull = 0 // quanto a colisão encurta o braço da câmera: entra rápido, sai devagar
+let manualUntil = 0 // U.uTime até quando a câmera respeita o ajuste manual
+const drag = { id: -1, x: 0, y: 0, moved: 0, button: 0 }
 let lastMode = nav.mode
 let anchor = 0 // scroll.progress ao entrar no explore
 let shown: StationId | '' = '' // estação cujo aviso nós pusemos no HUD
@@ -141,6 +156,10 @@ function integrate(dt: number) {
   bot.speed = Math.hypot(v.x, v.z)
 }
 
+// alvo livre para arrastar: nada de controles, links, rótulos clicáveis ou diálogos
+const freeTarget = (t: EventTarget | null) =>
+  !(t instanceof Element && t.closest('a, button, input, textarea, select, label, [data-cursor], [role="dialog"]'))
+
 const editable = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')
 
@@ -161,30 +180,79 @@ export function BitController() {
       if (k) {
         keys[k] = true
         invalidate(30) // modo sob demanda (reduced motion): teclado também pede quadros
-        if (k !== 'run') nav.mode = 'explore'
+        const turn = k === 'turnL' || k === 'turnR'
+        if (MOVE_KEYS.has(k) || (turn && nav.mode === 'explore')) nav.mode = 'explore'
+        if (turn) manualUntil = U.uTime.value + MANUAL_HOLD
         if (e.code.startsWith('Arrow')) e.preventDefault() // seta rolaria a página (e voltaria ao tour)
         return
       }
       // Enter num botão/link focado é do botão, não do BIT
       const onControl = e.target instanceof Element && !!e.target.closest('a, button')
       if (e.code === 'Escape') nav.mode = 'tour'
-      else if (nav.near && !e.repeat && (e.code === 'KeyE' || (e.key === 'Enter' && !onControl))) openStation(nav.near)
+      else if (e.code === 'KeyC' && nav.mode === 'explore') { camYaw = bot.heading + Math.PI; camPitch = PITCH0; camDist = CAM_DIST; manualUntil = 0 }
+      else if (nav.near && !e.repeat && (e.code === 'KeyF' || (e.key === 'Enter' && !onControl))) { audio.open(); openStation(nav.near) }
     }
     const up = (e: KeyboardEvent) => {
       const k = CODES[e.code]
       if (k) keys[k] = false
     }
-    const reset = () => { keys.f = keys.b = keys.l = keys.r = keys.run = false }
-    const wheel = () => { if (nav.mode === 'explore') nav.mode = 'tour' }
+    const reset = () => { for (const k in keys) keys[k as keyof typeof keys] = false }
+    // roda no explore = zoom (a página está parada); fora dele, o scroll normal do tour
+    const wheel = (e: WheelEvent) => {
+      if (nav.mode !== 'explore' || uiBusy()) return
+      e.preventDefault()
+      camDist = MathUtils.clamp(camDist * Math.exp(e.deltaY * 0.0012), DIST_MIN, DIST_MAX)
+      manualUntil = U.uTime.value + MANUAL_HOLD
+      invalidate(30)
+    }
+    // arrastar orbita a câmera em volta do BIT. Mouse: arrastar em qualquer
+    // modo entra no explore. Toque: só no explore (no tour o dedo rola a página).
+    const pdown = (e: PointerEvent) => {
+      if (uiBusy() || !freeTarget(e.target)) return
+      if (e.pointerType === 'touch' && nav.mode !== 'explore') return
+      if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return
+      if (e.clientX > innerWidth - 18) return // barra de rolagem
+      drag.id = e.pointerId; drag.x = e.clientX; drag.y = e.clientY; drag.moved = 0; drag.button = e.button
+    }
+    const pmove = (e: PointerEvent) => {
+      if (e.pointerId !== drag.id) return
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y
+      drag.x = e.clientX; drag.y = e.clientY
+      drag.moved += Math.abs(dx) + Math.abs(dy)
+      if (drag.moved < 6) return
+      if (nav.mode !== 'explore') nav.mode = 'explore'
+      camYaw -= dx * 0.0055
+      camPitch = MathUtils.clamp(camPitch + dy * 0.0045, PITCH_MIN, PITCH_MAX)
+      manualUntil = U.uTime.value + MANUAL_HOLD
+      cursor.label = 'ORBIT'
+      invalidate(20)
+    }
+    const pup = (e: PointerEvent) => {
+      if (e.pointerId !== drag.id) return
+      if (cursor.label === 'ORBIT') cursor.label = ''
+      drag.id = -1
+    }
+    // botão direito arrastado não abre o menu de contexto
+    const ctx = (e: MouseEvent) => { if (drag.button === 2 && drag.moved >= 6) e.preventDefault() }
     addEventListener('keydown', down)
     addEventListener('keyup', up)
     addEventListener('blur', reset)
-    addEventListener('wheel', wheel, { passive: true })
+    addEventListener('wheel', wheel, { passive: false })
+    addEventListener('pointerdown', pdown)
+    addEventListener('pointermove', pmove)
+    addEventListener('pointerup', pup)
+    addEventListener('pointercancel', pup)
+    addEventListener('contextmenu', ctx)
     return () => {
       removeEventListener('keydown', down)
       removeEventListener('keyup', up)
       removeEventListener('blur', reset)
       removeEventListener('wheel', wheel)
+      removeEventListener('pointerdown', pdown)
+      removeEventListener('pointermove', pmove)
+      removeEventListener('pointerup', pup)
+      removeEventListener('pointercancel', pup)
+      removeEventListener('contextmenu', ctx)
       reset()
       if (shown) hud.hide()
       shown = ''
@@ -202,7 +270,8 @@ export function BitController() {
       // entrou no explore com o scroll ainda andando (inércia do Lenis, salto
       // do openStation): para ali, senão a variação abaixo devolveria ao tour
       const l = scroll.lenis
-      if (nav.mode === 'explore' && l && l.isScrolling && !l.isStopped) { l.stop(); l.start() }
+      if (nav.mode === 'explore') l?.stop() // para a inércia e trava a página: a roda vira zoom
+      else if (l?.isStopped && !uiBusy()) l.start()
       anchor = scroll.progress
     }
     if (nav.mode === 'explore' && Math.abs(scroll.progress - anchor) > 0.002) nav.mode = lastMode = 'tour'
@@ -245,28 +314,41 @@ export function BitController() {
     // troca para o explore só muda distância/altura). No explore só gira para
     // trás do BIT quando ele anda "para dentro" da tela: andar de lado não gira
     // a câmera, senão o controle relativo à câmera viraria um círculo.
-    if (!explore) camYaw = az
-    else if (bot.speed > 0.05) {
-      const ahead = -(v.x * Math.sin(camYaw) + v.z * Math.cos(camYaw)) / bot.speed
-      camYaw = dampAngle(camYaw, bot.heading + Math.PI, 2.2 * Math.max(0, ahead), dt)
+    if (!explore) { camYaw = az; camPitch = PITCH0; camDist = CAM_DIST }
+    else {
+      if (keys.turnL) camYaw += 1.9 * dt
+      if (keys.turnR) camYaw -= 1.9 * dt
+      // auto-seguir (gira para trás do BIT ao andar "para dentro" da tela) só
+      // quando o visitante não mexeu na câmera nos últimos segundos
+      if (bot.speed > 0.05 && t > manualUntil && drag.id < 0) {
+        const ahead = -(v.x * Math.sin(camYaw) + v.z * Math.cos(camYaw)) / bot.speed
+        camYaw = dampAngle(camYaw, bot.heading + Math.PI, 2.2 * Math.max(0, ahead), dt)
+      }
     }
     // braço da câmera: encurta antes de estação mais alta que ela (rack, IA,
     // braço) e sobe para olhar por cima, senão atravessa a peça ou ela tapa o BIT
     const sx = Math.sin(camYaw), sz = Math.cos(camYaw)
-    let dist = CAM_DIST
+    const camH = 0.55 + camDist * Math.sin(camPitch) // altura pedida
+    const full = camDist * Math.cos(camPitch) // distância horizontal pedida
+    let dist = full
     for (const s of ST) {
-      if (s.top.y < CAM_H - 0.5) continue
+      if (s.top.y < camH - 0.5) continue
       const ox = bot.pos.x - s.x, oz = bot.pos.z - s.z, R = s.r + 0.2
       const b = ox * sx + oz * sz, h = b * b - (ox * ox + oz * oz - R * R)
       if (h <= 0) continue
       const hit = -b - Math.sqrt(h)
       if (hit > 0 && hit < dist) dist = Math.max(0.3, hit)
     }
-    nav.camPos.x = MathUtils.damp(nav.camPos.x, bot.pos.x + sx * dist, 5, dt)
-    nav.camPos.y = Math.max(0.6, MathUtils.damp(nav.camPos.y, CAM_H + (CAM_DIST - dist) * 0.45, 5, dt))
-    nav.camPos.z = MathUtils.damp(nav.camPos.z, bot.pos.z + sz * dist, 5, dt)
+    // arrastando: resposta firme (a câmera acompanha a mão); solta: suave
+    const k = drag.id >= 0 && drag.moved >= 6 ? 12 : 5
+    pull = MathUtils.damp(pull, full - dist, full - dist > pull ? 14 : 2.5, dt)
+    const arm = Math.max(0.3, full - pull)
+    nav.camPos.x = MathUtils.damp(nav.camPos.x, bot.pos.x + sx * arm, k, dt)
+    nav.camPos.y = Math.max(0.6, MathUtils.damp(nav.camPos.y, camH + pull * 0.45, k, dt))
+    nav.camPos.z = MathUtils.damp(nav.camPos.z, bot.pos.z + sz * arm, k, dt)
     nav.camTarget.x = MathUtils.damp(nav.camTarget.x, bot.pos.x, 8, dt)
-    nav.camTarget.y = 0.55
+    // de perto, o foco sobe do pé para o corpo do BIT
+    nav.camTarget.y = 0.55 + 0.22 * (1 - (camDist - DIST_MIN) / (DIST_MAX - DIST_MIN))
     nav.camTarget.z = MathUtils.damp(nav.camTarget.z, bot.pos.z, 8, dt)
 
     // estação ao alcance (borda + 1 m) → aviso no HUD
@@ -282,7 +364,7 @@ export function BitController() {
     if ((near?.k ?? '') !== shown) {
       if (near) {
         if (coarsePointer) hud.show('TAP', 'OPEN ' + near.label, 'TAP BIT', near.top)
-        else hud.show('[E]', 'OPEN ' + near.label, 'PRESS E · OR CLICK BIT', near.top)
+        else hud.show('[F]', 'OPEN ' + near.label, 'PRESS F · OR CLICK BIT', near.top)
       } else hud.hide()
       shown = near?.k ?? ''
     }
@@ -302,6 +384,7 @@ export function BitController() {
     target.copy(e.point)
     clampTarget(target)
     hasTarget = true
+    audio.tick()
     nav.mode = 'explore'
   }
 
