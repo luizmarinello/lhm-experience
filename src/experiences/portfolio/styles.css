@@ -1,0 +1,170 @@
+/* Portfólio — o laboratório (estúdio claro, cor orgânica) */
+.exp {
+  --ink: #2a2230;
+  --dim: rgb(42 34 48 / 0.62);
+  --faint: rgb(42 34 48 / 0.25);
+  --accent: #ff6f59;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Inter Tight', 'Inter', system-ui, sans-serif;
+  font-family: var(--font-display);
+  color: var(--ink);
+}
+body { background: #f4e2e2; }
+.exp .chrome { text-shadow: 0 1px 10px rgb(255 245 240 / 0.7); }
+
+.story { position: relative; z-index: 2; pointer-events: none; }
+
+
+/* Revelação: texto nasce de uma linha */
+.reveal { position: relative; display: inline-block; padding-bottom: 0.4em; }
+.reveal__line {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 1px; background: currentColor; opacity: 0.6;
+  transform-origin: left center;
+}
+
+/* HUD diegético (rótulo que segue um ponto 3D) */
+.hud {
+  position: fixed; left: 0; top: 0; z-index: 15;
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.25s;
+  font: 500 10px/1.4 var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+.hud.is-on { opacity: 1; }
+.hud__leader {
+  position: absolute; left: 0; bottom: 0;
+  width: 44px; height: 1px; background: var(--ink);
+  transform-origin: left; transform: rotate(-38deg);
+}
+.hud__box {
+  position: absolute; left: 34px; bottom: 26px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px; white-space: nowrap;
+  background: rgb(255 250 247 / 0.93);
+  border-left: 1px solid var(--accent);
+}
+.hud__code { color: var(--accent); }
+.hud__meta { color: var(--dim); }
+
+/* Sem WebGL: a mesma narrativa em DOM sobre um céu em CSS */
+.exp--flat { background: linear-gradient(#f3e7f0, #f6d9cf 55%, #e9b8c6); min-height: 100vh; }
+
+/* ---------- Camada de texto das cenas ---------- */
+.overlay { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
+.overlay button, .overlay a { pointer-events: auto; }
+.kicker { margin: 0 0 10px; font: 500 11px/1.4 var(--font-mono); letter-spacing: 0.16em; color: var(--accent); }
+
+/* fundo claro quase opaco: garante contraste do texto sobre o 3D. Sem backdrop-filter:
+   desfocar por cima de um canvas que muda todo quadro custa caro para a GPU. */
+.frost {
+  background: rgb(255 250 247 / 0.93);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow: 0 18px 60px -30px rgb(80 30 50 / 0.45);
+}
+
+.hint {
+  position: absolute; left: 50%; bottom: calc(clamp(16px, 2.6vw, 36px) + 2px);
+  transform: translateX(-50%);
+  margin: 0; padding: 8px 14px; border-radius: 999px;
+  font: 500 10.5px/1 var(--font-mono); letter-spacing: 0.16em; color: var(--ink);
+  background: rgb(255 250 247 / 0.93);
+  white-space: nowrap;
+}
+.hint p { margin: 0; }
+.hint--explore { pointer-events: none; }
+
+.block { position: absolute; color: var(--ink); }
+.block--system { left: 0; right: 0; bottom: 15vh; display: grid; place-items: center; }
+.block--system h2 { margin: 0; font: 500 clamp(22px, 3.1vw, 46px) / 1 var(--font-display); letter-spacing: 0.12em; text-shadow: 0 2px 20px rgb(255 245 240 / 0.9); }
+
+/* identidade: o monitor mostra o nome grande; aqui fica uma legenda discreta (e legível) */
+.block--identity {
+  left: 50%; bottom: clamp(56px, 8vh, 96px); transform: translateX(-50%);
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; justify-content: center;
+  padding: 12px 20px; border-radius: 999px; max-width: calc(100vw - 32px);
+  background: rgb(255 250 247 / 0.93);
+}
+.block--identity .kicker { margin: 0; }
+.id-name { margin: 0; font: 650 clamp(16px, 1.6vw, 22px) / 1.1 var(--font-display); letter-spacing: -0.01em; }
+.id-role { margin: 0; font: 500 11px/1.4 var(--font-mono); letter-spacing: 0.18em; color: var(--dim); }
+
+.block--project {
+  left: clamp(16px, 5vw, 80px); top: 50%; transform: translateY(-50%);
+  width: min(400px, calc(100vw - 32px)); padding: 26px 26px 24px; border-radius: 20px;
+  background: rgb(255 250 247 / 0.93);
+}
+.pj-title { margin: 0; font: 700 clamp(34px, 4vw, 56px) / 0.95 var(--font-display); letter-spacing: -0.03em; }
+.pj-kicker { margin: 8px 0 14px; font: 500 11px/1.4 var(--font-mono); letter-spacing: 0.16em; color: var(--dim); }
+.pj-summary { margin: 0 0 14px; font: 400 16px/1.5 var(--font-display); }
+.pj-note { margin: 0 0 20px; font: 500 10px/1.4 var(--font-mono); letter-spacing: 0.16em; color: var(--dim); }
+
+.block--contact {
+  left: 50%; bottom: clamp(48px, 9vh, 110px); transform: translateX(-50%);
+  width: min(720px, calc(100vw - 32px)); padding: 30px 32px 26px; border-radius: 22px; text-align: center;
+  background: rgb(255 250 247 / 0.93);
+}
+.ct-title { margin: 0 0 20px; font: 600 clamp(28px, 3.6vw, 52px) / 1.02 var(--font-display); letter-spacing: -0.025em; }
+.ct-links { list-style: none; margin: 0 0 18px; padding: 0; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.ct-links a {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border-radius: 999px;
+  font: 500 13px/1 var(--font-mono); letter-spacing: 0.14em; text-decoration: none; color: #fff; background: var(--ink);
+  transition: background 0.25s;
+}
+.ct-links a:hover { background: var(--accent); }
+.ct-proof { margin: 0 0 16px; font: 400 13px/1.5 var(--font-display); color: var(--dim); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 20px; border-radius: 999px;
+  font: 500 12px/1 var(--font-mono); letter-spacing: 0.14em; color: #fff; background: var(--ink);
+  transition: background 0.25s, color 0.25s, opacity 0.25s;
+}
+.btn:hover:not(:disabled) { background: var(--accent); }
+.btn:disabled { opacity: 0.35; cursor: default; }
+.btn--ghost { color: var(--ink); background: transparent; box-shadow: inset 0 0 0 1px var(--faint); }
+.btn--ghost:hover:not(:disabled) { color: #fff; }
+
+/* Rótulos presos às estações */
+.slabel { position: fixed; left: 0; top: 0; z-index: 11; pointer-events: none; opacity: 0; }
+.slabel__dot { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgb(255 111 89 / 0.2); }
+.slabel__line { position: absolute; left: 0; bottom: 0; width: 1px; height: calc(46px * var(--w, 1)); background: var(--ink); transform-origin: bottom; }
+.slabel__text {
+  position: absolute; left: 10px; bottom: 42px; white-space: nowrap;
+  padding: 6px 10px; border-radius: 8px; background: rgb(255 250 247 / 0.93);
+  font: 600 12px/1 var(--font-mono); letter-spacing: 0.16em; color: var(--ink);
+}
+.slabel__idx { color: var(--accent); margin-right: 8px; }
+
+/* Painel EXPLORE PROJECT */
+.panel {
+  position: fixed; z-index: 25; left: clamp(12px, 4vw, 64px); top: 50%; transform: translateY(-50%);
+  width: min(440px, calc(100vw - 24px)); max-height: calc(100svh - 120px); overflow: auto;
+  padding: 22px 24px 22px; border-radius: 22px; color: var(--ink);
+  background: rgb(255 250 247 / 0.9);
+  box-shadow: 0 30px 80px -30px rgb(80 30 50 / 0.5);
+}
+.panel__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.panel__head .kicker { margin: 0; }
+.panel__count { margin: 18px 0 4px; font: 500 11px/1 var(--font-mono); letter-spacing: 0.16em; color: var(--dim); }
+.panel__title { margin: 0 0 14px; font: 700 34px/1 var(--font-display); letter-spacing: -0.02em; }
+.panel__layers { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 8px; }
+.layer {
+  display: grid; gap: 4px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px;
+  background: rgb(255 255 255 / 0.7); box-shadow: inset 0 0 0 1px rgb(42 34 48 / 0.08); transition: box-shadow 0.2s;
+}
+.layer:hover { box-shadow: inset 0 0 0 1px var(--accent); }
+.layer__label { font: 600 12px/1 var(--font-mono); letter-spacing: 0.14em; }
+.layer__tech { font: 500 11px/1.3 var(--font-mono); letter-spacing: 0.1em; color: var(--accent); }
+.layer__line { font: 400 14px/1.4 var(--font-display); color: var(--dim); }
+.is-standby .layer { opacity: 0.75; }
+.panel__nav { display: flex; justify-content: space-between; gap: 12px; }
+
+@media (max-width: 640px) {
+  .hint { bottom: 64px; white-space: normal; text-align: center; max-width: calc(100vw - 32px); }
+  .block--project { top: auto; bottom: 84px; transform: none; padding: 18px; }
+  .pj-summary { font-size: 14px; }
+  .block--identity { padding: 16px 18px; }
+  .panel { top: auto; bottom: 12px; transform: none; max-height: 70svh; }
+  .slabel__text { font-size: 10px; }
+}
